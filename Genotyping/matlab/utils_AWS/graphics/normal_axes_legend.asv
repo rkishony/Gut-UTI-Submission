@@ -1,0 +1,126 @@
+function ax_leg = normal_axes_legend(fig, position, handles, labels)
+%NORMAL_AXES_LEGEND Manual legend drawn in a normal axes (fixed on export).
+%   ax_leg = NORMAL_AXES_LEGEND(fig, [x y w h], handles, labels)
+
+assert(numel(handles)==numel(labels), 'handles and labels must match.');
+
+n = numel(handles);
+
+ax_leg = axes('Parent', fig, 'Units','normalized', 'Position', position, ...
+    'XLim',[0 1], 'YLim',[0.5 n+0.5], 'YDir','reverse', ...
+    'Visible','off', 'Box','off');
+hold(ax_leg,'on');
+
+% Icon geometry
+xIcon = 0.1;      % left edge of icon
+wIcon = 0.2;      % width of icon
+hIcon = 0.3;      % half-height in "legend rows"
+xText = 0.4;      % start of text
+
+h = struct; 
+
+for k = 1:n
+    h = handles(k);
+    y = k; % row index
+
+    if ~isgraphics(h), continue; end
+
+    if isa(h,'matlab.graphics.primitive.Patch') || ...
+            isa(h,'matlab.graphics.chart.primitive.Area')  || ...
+            isa(h,'matlab.graphics.chart.primitive.Bar')   || ...
+            (isprop(h,'FaceColor') && isprop(h,'EdgeColor'))
+        % ---- PATCH-LIKE ----
+        fc = pickColor(h,'FaceColor',[0.7 0.7 0.7]);
+        ec = pickColor(h,'EdgeColor','k');
+        lw = getdef(h,'LineWidth',0.5);
+        patch('Parent',ax_leg, ...
+            'XData',[xIcon xIcon+wIcon xIcon+wIcon xIcon], ...
+            'YData',[y-hIcon y-hIcon y+hIcon y+hIcon], ...
+            'FaceColor',fc, 'EdgeColor',ec, 'LineWidth',lw, ...
+            'Clipping','off');
+
+    elseif isa(h,'matlab.graphics.chart.primitive.Scatter')
+        % ---- SCATTER ----
+        mkr = getdef(h,'Marker','o');
+        me  = pickColor(h,'MarkerEdgeColor', getdef(h,'CData',[0 0 0]));
+        mf  = pickColor(h,'MarkerFaceColor','none');
+        szd = getdef(h,'SizeData',36); szd = double(szd(1));
+        ms  = max(6, sqrt(szd));
+        line('Parent',ax_leg, ...
+            'XData',xIcon+0.5*wIcon, 'YData',y, ...
+            'LineStyle','none', 'Marker',mkr, 'MarkerSize',ms, ...
+            'MarkerEdgeColor',me, 'MarkerFaceColor',mf, ...
+            'Clipping','off');
+
+    else
+        % ---- LINE-LIKE ----
+        ls  = getdef(h,'LineStyle','-');
+        col = pickColor(h,'Color','k');
+        lw  = getdef(h,'LineWidth',1.5);
+        mk  = getdef(h,'Marker','none');
+        mfc = pickColor(h,'MarkerFaceColor','none');
+        mec = pickColor(h,'MarkerEdgeColor',col);
+        ms  = getdef(h,'MarkerSize',6);
+
+        line('Parent',ax_leg, ...
+            'XData',[xIcon xIcon+wIcon], 'YData',[y y], ...
+            'LineStyle',ls, 'Color',col, 'LineWidth',lw, ...
+            'Clipping','off');
+
+        if ~strcmpi(mk,'none')
+            line('Parent',ax_leg, ...
+                'XData',xIcon+0.5*wIcon, 'YData',y, ...
+                'LineStyle','none', 'Marker',mk, 'MarkerSize',ms, ...
+                'MarkerFaceColor',mfc, 'MarkerEdgeColor',mec, ...
+                'Clipping','off');
+        end
+    end
+
+    text('Parent',ax_leg, 'Position',[xText y 0], 'String',labels{k}, ...
+        'VerticalAlignment','middle', 'Interpreter','none');
+end
+
+hold(ax_leg,'off');
+
+% ---------- helpers
+% ----------
+    function v = getdef(obj, prop, def)
+        if isprop(obj,prop)
+            v = get(obj,prop);
+            if isempty(v), v = def; end
+        else
+            v = def;
+        end
+        if isnumeric(v) && size(v,1)>1 && size(v,2)==3
+            v = v(1,:);
+        end
+    end
+
+    function c = pickColor(obj, prop, def)
+        if ~isprop(obj,prop), c = def; return; end
+        c = get(obj,prop);
+        if isnumeric(c)
+            if size(c,1)>1, c = c(1,:); end
+            return;
+        elseif ischar(c) || isstring(c)
+            c = char(c);
+            if strcmpi(c,'auto')
+                base = getdef(obj,'Color', def);
+                c = base;
+                return;
+            end
+            if any(strcmpi(c,{'flat','interp'}))
+                cd = getdef(obj,'CData', def);
+                if isnumeric(cd) && size(cd,2)==3
+                    c = cd(1,:);
+                else
+                    c = def;
+                end
+                return;
+            end
+            return; % keep 'r', 'none', etc.
+        else
+            c = def;
+        end
+    end
+end
