@@ -1,0 +1,96 @@
+function [cf, h] = fig_bar_res_sen(fig, counts, labels, rf_or_phen, clr_sen, clr_res, ymax)
+% counts: (2, 2, n_minor, n_major)
+
+cf = [];
+h = [];
+
+global CONFIG  %#ok<GVMIS>
+if ~CONFIG.create_figures
+    return
+end
+
+if nargin<7, ymax = []; end
+
+sz_counts = size(counts);
+
+% Standardizing legend naming for genotypic and phenotypic plots:
+if strcmp(rf_or_phen, 'PHEN')
+    geno_pheno = 'pheno';
+else
+    geno_pheno = 'geno';
+end 
+
+
+% calc number of counts in each category (n) and fraction (p)
+n = sum(counts, 2);
+p = counts(:, 2, :, :) ./ n;
+
+n = permute(n, [1 3 4 2]);
+p = permute(p, [1 3 4 2]);
+
+err_p = sqrt(p .* (1-p) ./ n);
+
+% y-max
+if isempty(ymax)
+    ymax = max((p+2*err_p)*1.2, [], "all");
+end
+
+% Figure setup
+cf = figure(fig); clf
+axis([0 1 0 ymax])
+set(gca,'fontsize',6)
+hold on
+box on
+
+% bars
+[X, h.bar, h.labels] = multidimbar(p, [0.055, 0.17, 0.18], labels);
+% [X, h.bar, h.labels] = multidimbar(p, [0.03, 0.09, 0.18], labels);
+set(h.bar(1:2:end), 'FaceColor', clr_sen)
+set(h.bar(2:2:end), 'FaceColor', clr_res)
+set(h.labels{2}, 'fontsize', 5)
+set(h.labels{3}, 'fontsize', 6)
+set(gca,'XTick',[])
+set(gca,'Position',[0.16 0.15 0.8 0.6])
+ylabel('Probability of a resistant urine culture','FontSize',8);
+
+% errorbars
+h.err = errorbar(X(:), p(:), err_p(:), 'LineStyle','none','Color','k','LineWidth',0.5);
+set(h.err, 'CapSize', 3)
+
+% 'n=' labels
+for i = numel(X):-1:1
+    h.cnt_text(i) = text(X(i), p(i)+err_p(i), sprintf('n=%d', n(i)), ...
+        'VerticalAlignment','bottom','HorizontalAlignment','center','FontSize',4.5);
+end
+
+% p-values and sig stars
+p_vals = zeros(sz_counts(3:end));
+for j = prod(sz_counts(3:end)):-1:1
+    [~,p_val] = fishertest(counts(:,:,j));
+    p_vals(j) = p_val;
+    [h.sig_line(j), h.sig_text(j)] = plotsigstars(X(:,j), max(p(:,j)+err_p(:,j))+ymax*0.05, significance_marker(p_val));
+end
+set(h.sig_text, 'fontsize', 5)
+
+% legend
+h.legend_items = [
+    plot(nan,'Color','none')
+    patch(nan, nan, clr_sen, 'edgecolor','none') 
+    patch(nan, nan, clr_res, 'edgecolor','none')
+    ];
+lgd_text = { ...
+    sprintf('Patients stratified by faecal %stypic resistance:', geno_pheno), ...
+    sprintf('Sensitive pathobiome (\\itf_{%stype}<\\itf_{%stype}^{ C})', geno_pheno, geno_pheno), ...
+    sprintf('Resistant pathobiome (\\itf_{%stype}>\\itf_{%stype}^{ C})', geno_pheno, geno_pheno)};
+%h.legend = legend(h.legend_items, lgd_text, ...
+%    "box","off", 'Location','northwest','FontSize',6);
+
+% Set physical size
+set_axes_physical_size(gca, 2.2, 2.5, 'inch',2);
+
+[h.legend_ax, h.legend] = normal_axes_legend(cf, [0.05 0.78 0.9 0.135], h.legend_items, lgd_text, ...
+    'fontsize', 7);
+h.legend.text(1).Position(1)= 0.02;
+
+
+end

@@ -1,0 +1,29 @@
+function MHSdata = processMHSdata(MHSall, u_utis)
+
+pths = get_folders;
+
+UTIpop = MHSall.UTIpop;
+cBACres = MHSall.BAC;
+
+UTIpop = UTIpop(ismember(UTIpop.UTI_ID,u_utis),:);
+BACres = innerjoin(cBACres, UTIpop(:,{'UTI_Drisha', 'UTI_ID'}),'Keys','UTI_Drisha');
+MHSall.BACres = BACres;
+
+BACres2 = sep2UTIs(MHSall);
+
+MHSdata = BACres2(:,["mic", "vnum", "FOBT_ID", "UTI_ID", "SampleDate", "Bacteria"]);
+
+isAMP = cellfun(@(c) strcmp('Ampicillin',c), MHSall.RES.Name);
+isCEF = cellfun(@(c) strcmp('Cefazolin',c), MHSall.RES.Name); % I think if we want this to also work for cefalexin or otherwise
+isCIP = cellfun(@(c) strcmp('Ciprofloxacin',c), MHSall.RES.Name); 
+isNIT = cellfun(@(c) strcmp('Nitrofurantoin',c), MHSall.RES.Name); 
+isTMP = cellfun(@(c) strcmp('Trimethoprim-Sulfa',c), MHSall.RES.Name); 
+
+relABs = [find(isAMP) find(isCEF) find(isCIP) find(isNIT) find(isTMP)]; %[14,16,3,2,13,7,6];
+
+MHSdata.mic = MHSdata.mic(:,relABs);
+MHSdata.vnum = MHSdata.vnum(:,relABs);
+
+save(fullfile(pths.mat_outputs, 'BACres_complexUTIssplit'), 'MHSdata')
+
+end

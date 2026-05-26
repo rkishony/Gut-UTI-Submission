@@ -1,0 +1,82 @@
+function cf = fig_oddsratio_vs_time(fig, OR, OR_perm_P_val, OR_perm_prctile, OR_bs_prctile, ...
+    Days, plot_perm_null)
+
+cf = [];
+
+global CONFIG  %#ok<GVMIS>
+if ~CONFIG.create_figures
+    return
+end
+
+if nargin<8
+    plot_perm_null = false;
+end
+
+% Convert to log:
+OR = bounded_log2(OR);
+OR_perm_prctile = bounded_log2(OR_perm_prctile);
+OR_bs_prctile = bounded_log2(OR_bs_prctile);
+
+% Define Confidence Interval to plot:
+OR_bs_CI = OR_bs_prctile(:,[1 3]);
+OR_perm_CI = OR_perm_prctile(:,[1 3]);
+OR_perm_median = OR_perm_prctile(:,2);
+
+% Time axis
+Days = Days';
+Weeks = Days / 7;
+
+% Figure
+cf = figure(fig);clf
+hold on; box on
+set(gca,'FontSize',6)
+xlabel('Time post faecal sample, weeks', 'FontSize',7)
+ylabel({'Odds ratio for urine culture resistance', ...
+    'given faecal resistance'}, 'FontSize',7)
+xlim([-3 51])
+ylim([0 3.16])
+set(gca,'XTick',Weeks)
+ytck = 1:8;
+set(gca,'Ytick',log2(ytck),'YtickLabel',arrayfun(@num2str, ytck, 'uni', 0))
+
+% Null permutation CI:
+if plot_perm_null
+    patch([Weeks ; Weeks(end:-1:1)], [OR_perm_CI(:,1); OR_perm_CI(end:-1:1,2)], 0.9+[0 0 0])
+    % plot(Weeks, OR_perm_median, '-', 'Color', 'k', 'LineWidth',1)
+end
+
+% Nominal values:
+bar(Weeks, OR, 'BarWidth',0.4, 'FaceColor', [0 0 0]+0.7)
+plot(Weeks, OR, 'o-', 'Color', 'k', 'LineWidth',1, 'MarkerFaceColor','k')
+
+% Error bars:
+OR_bs_CI(OR_bs_CI(:,1)<0,:) = OR(OR_bs_CI(:,1)<0, [1 1]);
+errorbar(Weeks, OR, OR-OR_bs_CI(:,1), -OR+OR_bs_CI(:,2), 'Color','k', ...
+    'LineStyle','none')
+
+% Significance:
+for jt = 1:numel(Days)
+    y = OR_bs_CI(jt,2)+0.02;  % if including errrobars
+    % y = OR(jt)+0.02;
+    text(Weeks(jt), y, significance_marker(OR_perm_P_val(jt)), 'HorizontalAlignment','center', ...
+        'VerticalAlignment','bottom', 'FontSize',6)
+end
+
+% Linear fit
+% pf = polyfit(Weeks, OR,1);
+% xf = Weeks([1 end]) + [-2 2];
+% plot(xf, polyval(pf,xf), '-', 'Color',[0.8 0.1 0.1], 'LineWidth',2)
+
+set_axes_physical_size(gca, 3.2, 1.8, 'inches');
+
+end
+
+
+function log2x = bounded_log2(x, maxval)
+if nargin<2
+    maxval = 1e8;
+end
+x(x>maxval) = maxval;
+x(x<1/maxval) = 1/maxval;
+log2x = log2(x);
+end
