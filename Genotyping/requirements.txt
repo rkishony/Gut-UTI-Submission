@@ -4,13 +4,13 @@
 # These are the third-party PyPI packages imported directly by the code
 # (steps/, tools/, utils/, scripts/). Version numbers below are the minimum
 # versions known to be compatible; the pipeline was developed against the
-# versions bundled with the external bioinformatics tools listed in
-# Genotyping/README.md (MetaPhlAn/StrainPhlAn pin their own numpy/pandas).
+# versions bundled with the external bioinformatics tools listed in the
+# root README.md (MetaPhlAn/StrainPhlAn pin their own numpy/pandas).
 #
 # NOTE: the external command-line tools (cutadapt, bowtie2, seqtk, mash,
 # MetaPhlAn, StrainPhlAn, ResFinder, PointFinder, MetaMLST, mlst, unicycler)
-# and their reference databases are NOT installable via pip. See
-# Genotyping/README.md for how to install them and which versions were used.
+# and their reference databases are NOT installable via pip. See the root
+# README.md for how to install them and which versions were used.
 
 numpy>=1.24
 pandas>=1.5
